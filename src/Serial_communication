@@ -1,0 +1,28 @@
+a mensagem tem um total de 7 bytes;
+cada mensagem deve começar com byte 30 e terminar com byte 50;
+segundo byte é o byte de comando;
+os proximos 4 bytes devem conter os parametros necessários (float or int);
+
+lista de comandos:
+    - Requer parametro:
+        - "Status.configPID.walk.kd" -> configura o kd do PID de andar (byte 110) (recebe um float);
+        - "Status.configPID.walk.ki" -> configura o ki do PID de andar (byte 111) (recebe um float);
+        - "Status.configPID.walk.kp" -> configura o kp do PID de andar (byte 112) (recebe um float);
+        - "Status.configPID.turn.kd" -> configura o kd do PID de virar (byte 113) (recebe um float);
+        - "Status.configPID.turn.ki" -> configura o ki do PID de virar (byte 114) (recebe um float);
+        - "Status.configPID.turn.kp" -> configura o kp do PID de virar (byte 115) (recebe um float);
+        - "Status.configCOL" -> configura ação e distancia de colisão (byte 116) (byte 3 define a ação e o byte 4 define a distầncia);
+        - "World.step" -> diz qual é a próxima ação do robô (byte 117)
+                          (byte 1 define qual a ação e os outros 3 compoem um int para o numero de passos)
+                          (bit 0 controla direção e bit 1 controla ação);
+
+    - não requer parametro:
+        - "Control.check" -> sinaliza um "OK" para o ESP (byte 100);
+        - "Control.reset" -> reinicia o Arduino (byte 101);
+        - "Status.paramPID.walk" -> retorna ki, kp e kd do PID walk (byte 102);
+        - "Status.paramPID.turn" -> retorna ki, kp e kd do PID turn (byte 103);
+        - "Status.paramCOL" -> retorna a ação e distância de colisão (byte 104) (0 e STOP e 1 é NEXT);
+        - "Status.paramPOS" -> retorna a ultima posição alcançada (byte 105);
+        - "World.getINFO" -> retorna dados dos sensores (byte 106);
+
+(1E640000000032) executa Control.check
