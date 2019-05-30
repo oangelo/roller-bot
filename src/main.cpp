@@ -11,16 +11,34 @@ using namespace world;
 
 byte serial[7];
 
-float array_to_Float(byte byte0, byte byte1, byte byte2, byte byte3){
-  float output;
-  output = ((byte0<<24)|(byte1<<16)|(byte2<8)|(byte3)); // WE HAVE NO IDEA IF THIS FUNCTION WORKS
-  return output;
+union AtoF{
+  float f;
+  byte a4[4];
+}floatbyte;
+
+union AtoI{
+  uint32_t u;
+  byte a4[4];
+}intbyte;
+
+uint32_t array_to_Int(byte byte0, byte byte1, byte byte2, byte byte3){
+
+  intbyte.a4[3] = byte0;
+  intbyte.a4[2] = byte1;
+  intbyte.a4[1] = byte2;
+  intbyte.a4[0] = byte3;
+
+  return intbyte.u;
 }
 
-int array_to_Int(byte byte0, byte byte1, byte byte2, byte byte3){
-  int output;
-  output = ((byte0<<24)|(byte1<<16)|(byte2<8)|(byte3));
-  return output;
+float array_to_Float(byte byte0, byte byte1, byte byte2, byte byte3){
+
+  floatbyte.a4[3] = byte0;
+  floatbyte.a4[2] = byte1;
+  floatbyte.a4[1] = byte2;
+  floatbyte.a4[0] = byte3;
+
+  return floatbyte.f;
 }
 
 void serialReader(){
@@ -35,104 +53,130 @@ void serialReader(){
     switch (serial[1]){
 
       case 100:
-        Serial.print("OK");
+      Serial.println("OK");
       break;
 
       case 101:
-        wdt_reset();
+      wdt_reset();
       break;
 
       case 102:
-        Serial.print(walk_Kd);
-        Serial.print(", ");
-        Serial.print(walk_Ki);
-        Serial.print(", ");
-        Serial.print(walk_Kp);
-        Serial.print(", ");
+      Serial.print("WALK PID = ");
+      Serial.print(walk_Kp, 4);
+      Serial.print(", ");
+      Serial.print(walk_Ki, 4);
+      Serial.print(", ");
+      Serial.println(walk_Kd, 4);
       break;
 
       case 103:
-        Serial.print(turn_Kd);
-        Serial.print(", ");
-        Serial.print(turn_Ki);
-        Serial.print(", ");
-        Serial.print(turn_Kp);
+      Serial.print("TURN PID = ");
+      Serial.print(turn_Kp, 4);
+      Serial.print(", ");
+      Serial.print(turn_Ki, 4);
+      Serial.print(", ");
+      Serial.println(turn_Kd, 4);
       break;
 
       case 104:
-        Serial.print(actionCollision?"NEXT":"STOP");
-        Serial.print(", ");
-        Serial.print(collision);
+      Serial.print(actionCollision?"NEXT":"STOP");
+      Serial.print(", ");
+      Serial.println(collision);
       break;
 
       case 105:
-        Serial.print(leftEncoderPosition);
-        Serial.print(", ");
-        Serial.print(rightEncoderPosition);
+      Serial.print("POSITION = ");
+      Serial.print(leftEncoderPosition);
+      Serial.print(", ");
+      Serial.println(rightEncoderPosition);
       break;
 
       case 106:
-        Serial.print(frontDistance);
-        Serial.print(", ");
-        Serial.print(backDistance);
+      updateDistance();
+      Serial.print("DISTANCE = ");
+      Serial.print(frontDistance);
+      Serial.print(", ");
+      Serial.println(backDistance);
       break;
 
       case 110:
-        walk_Kd = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
-        leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
-        rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      walk_Kd = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
+      leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      Serial.print("WALK_KD = ");
+      Serial.println(walk_Kd);
       break;
 
       case 111:
-        walk_Ki = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
-        leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
-        rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      walk_Ki = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
+      leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      Serial.print("WALK_KI = ");
+      Serial.println(walk_Ki);
       break;
 
       case 112:
-        walk_Kp = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
-        leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
-        rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      walk_Kp = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
+      leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      Serial.print("WALK_KP = ");
+      Serial.println(walk_Kp);
       break;
 
       case 113:
-        turn_Kd = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
-        leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-        rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      turn_Kd = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
+      leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      Serial.print("TURN_KD = ");
+      Serial.println(turn_Kd);
       break;
 
       case 114:
-        turn_Ki = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
-        leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-        rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      turn_Ki = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
+      leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      Serial.print("TURN_KI = ");
+      Serial.println(turn_Ki);
       break;
 
       case 115:
-        turn_Kp = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
-        leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-        rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      turn_Kp = array_to_Float(serial[2], serial[3], serial[4], serial[5]);
+      leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      Serial.print("TURN_KP = ");
+      Serial.println(turn_Kp);
       break;
 
       case 116:
-        actionCollision = (serial[4] == 1);
-        collision = serial[5];
+      actionCollision = (serial[4] == 1);
+      if(serial[5]>30) serial[5] = 30;
+      else if(serial[5]<0) serial[5] = 0;
+      collision = serial[5];
+      Serial.print("COLLISION = ");
+      Serial.print(serial[4]==1?"NEXT":"STOP");
+      Serial.print(", ");
+      Serial.println(serial[5]);
+
       break;
 
       case 117:
-        int steps = array_to_Int(0, serial[3], serial[4], serial[5]);
-        int action = ((serial[2]>>1)&1);
-        if((serial[2]&1) == 1) steps *= -1;
-        execute(action, steps);
+      int steps = array_to_Int(0, serial[3], serial[4], serial[5]);
+      int action = ((serial[2]>>1)&1);
+      if((serial[2]&1) == 1) steps *= -1;
+      if(((serial[2]>>2)&1) == 0) execute(action, steps);
+      else permawalk((serial[2]&1) == 1);
+      Serial.println();
+    }
   }
-}
 }
 
 void setup() {
   delay(1000);
-  Serial.begin(115200);
+  Serial.begin(9600);
+  while(!Serial);
+  Serial.println();
   rightMotorPID.SetMode(AUTOMATIC);
   rightMotorPID.SetSampleTime(10);
-
   leftMotorPID.SetMode(AUTOMATIC);
   leftMotorPID.SetSampleTime(10);
 }

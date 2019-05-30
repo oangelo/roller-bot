@@ -1,7 +1,9 @@
-a mensagem tem um total de 7 bytes;
-cada mensagem deve começar com byte 30 e terminar com byte 50;
-segundo byte é o byte de comando;
-os proximos 4 bytes devem conter os parametros necessários (float or int);
+Cada mensagem tem um total de 7 bytes;
+Cada mensagem deve começar com byte 30 e terminar com byte 50;
+O segundo byte é o byte de comando;
+Os proximos 4 bytes devem conter os parametros necessários (float or int);
+E possivel interromper um execute enviando um byte 31;
+A funcao World.step possui uma variacao especial se ativado o bit 2, vai continuar andando ate colidir ou ser interrompida com um byte 31;
 
 lista de comandos:
     - Requer parametro:
@@ -14,7 +16,7 @@ lista de comandos:
         - "Status.configCOL" -> configura ação e distancia de colisão (byte 116) (byte 3 define a ação e o byte 4 define a distầncia);
         - "World.step" -> diz qual é a próxima ação do robô (byte 117)
                           (byte 1 define qual a ação e os outros 3 compoem um int para o numero de passos)
-                          (bit 0 controla direção e bit 1 controla ação);
+                          (bit 0 controla direção, bit 1 controla ação e bit 2 e especial);
 
     - não requer parametro:
         - "Control.check" -> sinaliza um "OK" para o ESP (byte 100);
@@ -25,4 +27,4 @@ lista de comandos:
         - "Status.paramPOS" -> retorna a ultima posição alcançada (byte 105);
         - "World.getINFO" -> retorna dados dos sensores (byte 106);
 
-(1E640000000032) executa Control.check
+Exemplo: (1E640000000032) executa Control.check
