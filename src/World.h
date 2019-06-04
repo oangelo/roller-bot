@@ -2,8 +2,6 @@
 #define PIN_RIGHTMOTOR2 7 //BROWN PIN
 #define PIN_LEFTMOTOR1 8 //YELLOW PIN
 #define PIN_LEFTMOTOR2 9 //ORANGE PIN
-#define PIN_FRONTSENSOR A0
-#define PIN_BACKSENSOR A1
 
 namespace world {
 
@@ -14,19 +12,21 @@ namespace world {
   double rightEncoderPosition, leftEncoderPosition;
   double newRightEncoderPosition, newLeftEncoderPosition;
 
+  long distNow = millis();
+
   byte collision = 10;
-  byte frontDistance, backDistance;
+  short frontDistance, backDistance;
 
   bool actionCollision = false; // false é pra parar, true é pra proximo passo.
 
   Encoder rightEncoderMotor(19, 18); //BROWN PIN, WHITE PIN
   Encoder leftEncoderMotor(20, 21); //BROWN PIN, WHITE PIN
 
-  PID rightMotorPID(&rightEncoderPosition, &rightOutput, &rightSetpoint, walk_Kp, walk_Ki, walk_Kd, P_ON_E, DIRECT);
+//  PID rightMotorPID(&rightEncoderPosition, &rightOutput, &rightSetpoint, walk_Kp, walk_Ki, walk_Kd, P_ON_E, DIRECT);
   PID leftMotorPID(&leftEncoderPosition, &leftOutput, &leftSetpoint, walk_Kp, walk_Ki, walk_Kd, P_ON_E, DIRECT);
 
-  SharpIR frontSensor( SharpIR::GP2Y0A41SK0F, PIN_FRONTSENSOR );
-  SharpIR backSensor( SharpIR::GP2Y0A41SK0F, PIN_BACKSENSOR );
+  Ultrasonic frontSensor(22, 23, 4000UL);
+  Ultrasonic backSensor(24, 25, 4000UL);
 
   void updateEncoder(){
     if (rightEncoderMotor.read() != rightEncoderPosition) rightEncoderPosition = rightEncoderMotor.read();
@@ -34,52 +34,52 @@ namespace world {
   }
 
   void updateDistance(){
-    frontDistance = frontSensor.getDistance();
-    backDistance = backSensor.getDistance();
+    backDistance = backSensor.read();
+    frontDistance = frontSensor.read();
   }
 
   void  zeroEncoder(){
     leftEncoderMotor.write(0);
+    leftEncoderPosition = 0;
     rightEncoderMotor.write(0);
+    rightEncoderPosition = 0;
+  }
+
+  void moveRightMotor(short output){
+    if(output>=0){
+      analogWrite(PIN_RIGHTMOTOR1, output);
+      analogWrite(PIN_RIGHTMOTOR2, LOW);
+    }else{
+      analogWrite(PIN_RIGHTMOTOR2, -output);
+      analogWrite(PIN_RIGHTMOTOR1, LOW);
+    }
+  }
+
+  void moveLeftMotor(short output){
+    if(output>0){
+      analogWrite(PIN_LEFTMOTOR1, output);
+      analogWrite(PIN_LEFTMOTOR2, LOW);
+    }else{
+      analogWrite(PIN_LEFTMOTOR2, -output);
+      analogWrite(PIN_LEFTMOTOR1, LOW);
+    }
   }
 
   void walkMoveMotor(){
-    if(leftOutput>0){
-      analogWrite(PIN_LEFTMOTOR1, fabs(leftOutput));
-      analogWrite(PIN_LEFTMOTOR2, LOW);
-      analogWrite(PIN_RIGHTMOTOR1, fabs(rightOutput));
-      analogWrite(PIN_RIGHTMOTOR2, LOW);
-    }
-    else{
-      analogWrite(PIN_LEFTMOTOR2, fabs(leftOutput));
-      analogWrite(PIN_LEFTMOTOR1, LOW);
-      analogWrite(PIN_RIGHTMOTOR2, fabs(rightOutput));
-      analogWrite(PIN_RIGHTMOTOR1, LOW);
-    }
+      moveLeftMotor(leftOutput);
+      moveRightMotor(leftOutput); // mudamos pra testar
   }
 
   void turnMoveMotor(){
     leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-    rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-    if(leftOutput>0&&rightOutput<0){
-      analogWrite(PIN_LEFTMOTOR1, fabs(leftOutput));
-      analogWrite(PIN_LEFTMOTOR2, LOW);
-      analogWrite(PIN_RIGHTMOTOR2, fabs(rightOutput));
-      analogWrite(PIN_RIGHTMOTOR1, LOW);
-    }
-    else{
-      analogWrite(PIN_LEFTMOTOR2, fabs(leftOutput));
-      analogWrite(PIN_LEFTMOTOR1, LOW);
-      analogWrite(PIN_RIGHTMOTOR1, fabs(rightOutput));
-      analogWrite(PIN_RIGHTMOTOR2, LOW);
-    }
+    //rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+    moveLeftMotor(-leftOutput);
+    moveRightMotor(leftOutput); //teste
   }
 
   void stopMove(){
-    analogWrite(PIN_RIGHTMOTOR1, LOW);
-    analogWrite(PIN_RIGHTMOTOR2, LOW);
-    analogWrite(PIN_LEFTMOTOR1, LOW);
-    analogWrite(PIN_LEFTMOTOR2, LOW);
+    moveLeftMotor(0);
+    moveRightMotor(0);
   }
 
   void permawalk(boolean direction){
@@ -88,27 +88,24 @@ namespace world {
     while(true){
       updateEncoder();
       updateDistance();
-      if(Serial.available()>0)
-      if(Serial.peek()==31) {
-        Serial.read();
-        result = "INTERRUPTED";
-        break;
+      if(Serial.available()>0){
+        if(Serial.peek()==31) {
+          Serial.read();
+          result = "INTERRUPTED";
+          break;
+        }
+        else Serial.read();
       }
-      else Serial.read();
       if (direction){
-        analogWrite(PIN_LEFTMOTOR2, fabs(255));
-        analogWrite(PIN_LEFTMOTOR1, LOW);
-        analogWrite(PIN_RIGHTMOTOR1, fabs(255));
-        analogWrite(PIN_RIGHTMOTOR2, LOW);
+        moveLeftMotor(-255);
+        moveRightMotor(-255);
         if(backDistance<=collision) {
           result = "COLLISION";
           break;
         }
       }else{
-        analogWrite(PIN_LEFTMOTOR1, fabs(255));
-        analogWrite(PIN_LEFTMOTOR2, LOW);
-        analogWrite(PIN_RIGHTMOTOR1, fabs(255));
-        analogWrite(PIN_RIGHTMOTOR2, LOW);
+        moveLeftMotor(255);
+        moveRightMotor(255);
         if(frontDistance<=collision) {
           result = "COLLISION";
           break;
@@ -116,15 +113,11 @@ namespace world {
       }
     }
     if(direction){
-      analogWrite(PIN_LEFTMOTOR1, fabs(255));
-      analogWrite(PIN_LEFTMOTOR2, LOW);
-      analogWrite(PIN_RIGHTMOTOR1, fabs(255));
-      analogWrite(PIN_RIGHTMOTOR2, LOW);
+      moveLeftMotor(255);
+      moveRightMotor(255);
     }else{
-      analogWrite(PIN_LEFTMOTOR2, fabs(255));
-      analogWrite(PIN_LEFTMOTOR1, LOW);
-      analogWrite(PIN_RIGHTMOTOR1, fabs(255));
-      analogWrite(PIN_RIGHTMOTOR2, LOW);
+      moveLeftMotor(-255);
+      moveRightMotor(-255);
     }
     delay(100);
     stopMove();
@@ -137,29 +130,29 @@ namespace world {
 
   void execute(int action, int steps){
     String result;
+    zeroEncoder();
     if(action == 0){
       leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
-      rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
+      //rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
       if(steps > 0){
         leftMotorPID.SetOutputLimits(30, 255);
-        rightMotorPID.SetOutputLimits(30, 255);
+        //rightMotorPID.SetOutputLimits(30, 255);
       }
       else{
         leftMotorPID.SetOutputLimits(-255, -30);
-        rightMotorPID.SetOutputLimits(-255, -30);
+        //rightMotorPID.SetOutputLimits(-255, -30);
       }
       leftSetpoint = steps;
-      rightSetpoint = steps;
-      zeroEncoder();
+      //rightSetpoint = steps;
       while(fabs(leftEncoderPosition - leftSetpoint) > 20){
+        updateEncoder();
+        updateDistance();
         if(Serial.available()>0) if(Serial.peek() == 31){
           Serial.read();
           result = "INTERRUPTED";
           break;
         }
-        updateEncoder();
-        updateDistance();
-        rightMotorPID.Compute();
+        //rightMotorPID.Compute();
         leftMotorPID.Compute();
         if(steps > 0 && frontDistance <= collision){
           result = "COLLISION";
@@ -176,18 +169,17 @@ namespace world {
     }
     if(action == 1){
       leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-      rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
+      //rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       if(steps > 0){
         leftMotorPID.SetOutputLimits(30, 255);
-        rightMotorPID.SetOutputLimits(-255, -30);
+        //rightMotorPID.SetOutputLimits(-255, -30);
       }
       else{
         leftMotorPID.SetOutputLimits(-255, -30);
-        rightMotorPID.SetOutputLimits(30, 255);
+        //rightMotorPID.SetOutputLimits(30, 255);
       }
       leftSetpoint = steps;
-      rightSetpoint = -steps;
-      zeroEncoder();
+      //rightSetpoint = -steps;
       while(fabs(leftEncoderPosition - leftSetpoint) > 20){
         if(Serial.available()>0) if(Serial.peek() == 31){
           Serial.read();
@@ -195,12 +187,12 @@ namespace world {
           break;
         }
         updateEncoder();
-        rightMotorPID.Compute();
+        //rightMotorPID.Compute();
         leftMotorPID.Compute();
         turnMoveMotor();
       }
-      stopMove();
-      if(result == NULL) result = "SUCCESS";
+    stopMove();
+    if(result == NULL) result = "SUCCESS";
     }
     Serial.print(result);
     Serial.print(", ");
