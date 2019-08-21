@@ -7,17 +7,17 @@ namespace world {
 
   double rightSetpoint, rightOutput;
   double leftSetpoint, leftOutput;
-  double walk_Kp=0.05, walk_Ki=0.002, walk_Kd=0.008;
-  double turn_Kp=0.05, turn_Ki=0.002, turn_Kd=0.008;
+  double walk_Kp=0.02, walk_Ki=0.002, walk_Kd=0.02;
+  double turn_Kp=0.02, turn_Ki=0.002, turn_Kd=0.01;
   double rightEncoderPosition, leftEncoderPosition;
-  double newRightEncoderPosition, newLeftEncoderPosition;
 
   long distNow = millis();
 
   byte collision = 10;
-  short frontDistance, backDistance;
+  byte frontDistance, backDistance;
 
   bool actionCollision = false; // false é pra parar, true é pra proximo passo.
+  bool direction;
 
   Encoder rightEncoderMotor(19, 18); //BROWN PIN, WHITE PIN
   Encoder leftEncoderMotor(20, 21); //BROWN PIN, WHITE PIN
@@ -29,8 +29,8 @@ namespace world {
   Ultrasonic backSensor(24, 25, 4000UL);
 
   void updateEncoder(){
-    if (rightEncoderMotor.read() != rightEncoderPosition) rightEncoderPosition = rightEncoderMotor.read();
-    if (leftEncoderMotor.read() != leftEncoderPosition) leftEncoderPosition = leftEncoderMotor.read();
+    if (rightEncoderMotor.read() != rightEncoderPosition) rightEncoderPosition = ((direction?-1:1)*rightEncoderMotor.read());
+    if (leftEncoderMotor.read() != leftEncoderPosition) leftEncoderPosition = ((direction?-1:1)*leftEncoderMotor.read());
   }
 
   void updateDistance(){
@@ -66,23 +66,39 @@ namespace world {
   }
 
   void walkMoveMotor(){
-      moveLeftMotor(leftOutput);
-      moveRightMotor(leftOutput); // mudamos pra testar
+      moveLeftMotor((direction?-1:1)*leftOutput);
+      moveRightMotor((direction?-1:1)*leftOutput); // mudamos pra testar
   }
 
   void turnMoveMotor(){
-    leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-    //rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-    moveLeftMotor(-leftOutput);
-    moveRightMotor(leftOutput); //teste
+    moveLeftMotor((direction?-1:1)*(-leftOutput));
+    moveRightMotor((direction?-1:1)*leftOutput); //teste
   }
 
   void stopMove(){
-    moveLeftMotor(0);
-    moveRightMotor(0);
+    leftOutput = 0;
+    walkMoveMotor();
   }
 
-  void permawalk(boolean direction){
+  void rampUp(){
+    leftOutput = 0;
+    byte ex = 0;
+    distNow = millis();
+    while(fabs(leftEncoderPosition - leftSetpoint) > 6000){
+      updateEncoder();
+      updateDistance();
+      if((direction?backDistance:frontDistance)>=collision){
+        if((millis() - distNow) > 200) {
+          distNow = millis();
+          ex += 10;
+        }
+        if(leftOutput<250) leftOutput = (40+ex);
+        walkMoveMotor();
+      }else break;
+    }
+  }
+
+  void permawalk(){
     String result;
     zeroEncoder();
     while(true){
@@ -123,27 +139,28 @@ namespace world {
     stopMove();
     Serial.print(result);
     Serial.print(", ");
-    Serial.print(leftEncoderPosition);
+    Serial.print(((direction?-1:1)*leftEncoderPosition));
     Serial.print(", ");
-    Serial.print(rightEncoderPosition);
+    Serial.print(((direction?-1:1)*rightEncoderPosition));
   }
 
-  void execute(int action, int steps){
+  void execute(int action, uint32_t steps){
     String result;
     zeroEncoder();
     if(action == 0){
       leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
       //rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
-      if(steps > 0){
         leftMotorPID.SetOutputLimits(30, 255);
         //rightMotorPID.SetOutputLimits(30, 255);
-      }
-      else{
-        leftMotorPID.SetOutputLimits(-255, -30);
-        //rightMotorPID.SetOutputLimits(-255, -30);
-      }
       leftSetpoint = steps;
       //rightSetpoint = steps;
+      if(fabs(leftEncoderPosition - leftSetpoint) > 6000){
+        leftMotorPID.SetMode(MANUAL);
+        rampUp();
+        leftOutput = leftMotorPID.Compute();
+        leftMotorPID.SetMode(AUTOMATIC);
+      }
+      leftOutput = 0;
       while(fabs(leftEncoderPosition - leftSetpoint) > 20){
         updateEncoder();
         updateDistance();
@@ -154,11 +171,12 @@ namespace world {
         }
         //rightMotorPID.Compute();
         leftMotorPID.Compute();
-        if(steps > 0 && frontDistance <= collision){
+        if(!direction && frontDistance <= collision){
           result = "COLLISION";
+          Serial.println (frontDistance);
           break;
         }
-        if(steps < 0 && backDistance <= collision){
+        if(direction && backDistance <= collision){
           result = "COLLISION";
           break;
         }
@@ -170,14 +188,8 @@ namespace world {
     if(action == 1){
       leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       //rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
-      if(steps > 0){
-        leftMotorPID.SetOutputLimits(30, 255);
+        leftMotorPID.SetOutputLimits(40, 255);
         //rightMotorPID.SetOutputLimits(-255, -30);
-      }
-      else{
-        leftMotorPID.SetOutputLimits(-255, -30);
-        //rightMotorPID.SetOutputLimits(30, 255);
-      }
       leftSetpoint = steps;
       //rightSetpoint = -steps;
       while(fabs(leftEncoderPosition - leftSetpoint) > 20){
@@ -194,11 +206,12 @@ namespace world {
     stopMove();
     if(result == NULL) result = "SUCCESS";
     }
+    updateEncoder();
     Serial.print(result);
     Serial.print(", ");
-    Serial.print(leftEncoderPosition);
+    Serial.print(((direction?-1:1)*leftEncoderPosition));
     Serial.print(", ");
-    Serial.print(rightEncoderPosition);
+    Serial.print(((direction?-1:1)*rightEncoderPosition));
   }
 
 }

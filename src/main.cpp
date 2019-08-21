@@ -86,9 +86,9 @@ void serialReader(){
 
       case 105:
       Serial.print("POSITION = ");
-      Serial.print(leftEncoderPosition);
+      Serial.print(((direction?-1:1)*leftEncoderPosition));
       Serial.print(", ");
-      Serial.println(rightEncoderPosition);
+      Serial.println(((direction?-1:1)*rightEncoderPosition));
       break;
 
       case 106:
@@ -104,7 +104,7 @@ void serialReader(){
       leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
       //rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
       Serial.print("WALK_KD = ");
-      Serial.println(walk_Kd);
+      Serial.println(walk_Kd, 4);
       break;
 
       case 111:
@@ -112,7 +112,7 @@ void serialReader(){
       leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
       //rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
       Serial.print("WALK_KI = ");
-      Serial.println(walk_Ki);
+      Serial.println(walk_Ki, 4);
       break;
 
       case 112:
@@ -120,7 +120,7 @@ void serialReader(){
       leftMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
       //rightMotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
       Serial.print("WALK_KP = ");
-      Serial.println(walk_Kp);
+      Serial.println(walk_Kp, 4);
       break;
 
       case 113:
@@ -128,7 +128,7 @@ void serialReader(){
       leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       //rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       Serial.print("TURN_KD = ");
-      Serial.println(turn_Kd);
+      Serial.println(turn_Kd, 4);
       break;
 
       case 114:
@@ -136,7 +136,7 @@ void serialReader(){
       leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       //rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       Serial.print("TURN_KI = ");
-      Serial.println(turn_Ki);
+      Serial.println(turn_Ki, 4);
       break;
 
       case 115:
@@ -144,7 +144,7 @@ void serialReader(){
       leftMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       //rightMotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       Serial.print("TURN_KP = ");
-      Serial.println(turn_Kp);
+      Serial.println(turn_Kp, 4);
       break;
 
       case 116:
@@ -160,21 +160,20 @@ void serialReader(){
       break;
 
       case 117:
-      int steps = array_to_Int(0, serial[3], serial[4], serial[5]);
+      uint32_t steps = array_to_Int(0, serial[3], serial[4], serial[5]);
       int action = ((serial[2]>>1)&1);
-      if((serial[2]&1) == 1) steps *= -1;
+      direction = ((serial[2]&1) == 1);
       if(((serial[2]>>2)&1) == 0) execute(action, steps);
-      else permawalk((serial[2]&1) == 1);
+      else permawalk();
       Serial.println();
     }
   }
 }
 
 void setup() {
-  delay(1000);
-  Serial.begin(9600);
+  Serial.begin(115200);
   while(!Serial);
-  Serial.println();
+  Serial.println("Tudo Pronto");
   //rightMotorPID.SetMode(AUTOMATIC);
   //rightMotorPID.SetSampleTime(10);
   leftMotorPID.SetMode(AUTOMATIC);
