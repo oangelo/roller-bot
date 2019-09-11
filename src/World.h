@@ -1,8 +1,17 @@
-#define PIN_RIGHTMOTOR1 6 //RED PIN
-#define PIN_RIGHTMOTOR2 7 //BROWN PIN
-#define PIN_LEFTMOTOR1 8 //YELLOW PIN
-#define PIN_LEFTMOTOR2 9 //ORANGE PIN
+#define PIN_RIGHTMOTOR1 13 //RED PIN
+#define PIN_RIGHTMOTOR2 12 //BROWN PIN
+#define PIN_LEFTMOTOR1 14 //YELLOW PIN
+#define PIN_LEFTMOTOR2 27 //ORANGE PIN
 
+#define PIN_RIGHTENCODER1 26 //BROWN PIN
+#define PIN_RIGHTENCODER2 25 //WHITE PIN
+#define PIN_LEFTENCODER1 33 //BROWN PIN
+#define PIN_LEFTENCODER2 32 //WHITE PIN
+
+#define PIN_BACKTRIGGER 23 //RED PIN
+#define PIN_BACKECHO 22 //BROWN PIN
+#define PIN_FRONTTRIGGER 18 //YELLOW PIN
+#define PIN_FRONTECHO 19 //ORANGE PIN
 
 namespace world {
 
@@ -19,17 +28,17 @@ namespace world {
   bool actionCollision = false; // false é pra parar, true é pra proximo passo.
   volatile bool leftDirection, rightDirection; //TRUE é para frente
 
-  Encoder rightEncoderMotor(19, 18); //BROWN PIN, WHITE PIN
-  Encoder leftEncoderMotor(20, 21); //BROWN PIN, WHITE PIN
+  ESP32Encoder rightEncoderMotor;
+  ESP32Encoder leftEncoderMotor;
 
   PID MotorPID(&leftEncoderPosition, &Output, &Setpoint, walk_Kp, walk_Ki, walk_Kd, P_ON_E, DIRECT);
 
-  Ultrasonic frontSensor(22, 23, 2000UL);
-  Ultrasonic backSensor(24, 25, 2000UL);
+  Ultrasonic frontSensor(PIN_FRONTTRIGGER, PIN_FRONTECHO, 2000UL);
+  Ultrasonic backSensor(PIN_BACKTRIGGER, PIN_BACKECHO, 2000UL);
 
-  void updateEncoder(bool direction){
-    if (rightEncoderMotor.read() != rightEncoderPosition) rightEncoderPosition = ((direction?-1:1)*rightEncoderMotor.read());
-    if (leftEncoderMotor.read() != leftEncoderPosition) leftEncoderPosition = ((direction?-1:1)*leftEncoderMotor.read());
+  void updateEncoder(){
+    leftEncoderPosition = leftEncoderMotor.getCount();
+    rightEncoderPosition = rightEncoderMotor.getCount();
   }
 
   void updateDistance(){
@@ -38,14 +47,14 @@ namespace world {
   }
 
   void  zeroEncoder(){
-    leftEncoderMotor.write(0);
-    leftEncoderPosition = 0;
-    rightEncoderMotor.write(0);
-    rightEncoderPosition = 0;
+    leftEncoderMotor.setCount(0);
+    rightEncoderMotor.setCount(0);
+    updateEncoder();
   }
 
   void moveMotor(){
     if(leftDirection){
+      ledcWrite(ledChannel, dutyCycle);
       analogWrite(PIN_LEFTMOTOR1, leftSpeed);
       analogWrite(PIN_LEFTMOTOR2, 0);
     }else{
@@ -73,7 +82,7 @@ namespace world {
       }
       Output = 0;
       while(fabs(leftEncoderPosition - Setpoint) > 20){
-        updateEncoder(direction);
+        updateEncoder();
         updateDistance();
         if(Serial.available()>0) if(Serial.peek() == 31){
           Serial.read();
@@ -105,7 +114,7 @@ namespace world {
           Serial.read();
           return "INTERRUPTED";
         }
-        updateEncoder(direction);
+        updateEncoder();
         MotorPID.Compute();
         leftSpeed = Output;
         rightSpeed = Output;
