@@ -169,15 +169,14 @@ void setup() {
   MotorPID.SetSampleTime(10);
   rightEncoderMotor.attachHalfQuad(PIN_RIGHTENCODER1, PIN_RIGHTENCODER2);
 	leftEncoderMotor.attachHalfQuad(PIN_LEFTENCODER1, PIN_LEFTENCODER2);
-  ledcSetup(0, 5000, 8);
-  ledcAttachPin(PIN_RIGHTMOTOR1, 0);
-  ledcSetup(1, 5000, 8);
-  ledcAttachPin(PIN_RIGHTMOTOR2, 1);
-  ledcSetup(2, 5000, 8);
-  ledcAttachPin(PIN_LEFTMOTOR1, 2);
-  ledcSetup(3, 5000, 8);
-  ledcAttachPin(PIN_LEFTMOTOR2, 3);
-
+  ledcSetup(RIGHTCHANNEL1, 5000, 8);
+  ledcAttachPin(PIN_RIGHTMOTOR1, RIGHTCHANNEL1);
+  ledcSetup(RIGHTCHANNEL2, 5000, 8);
+  ledcAttachPin(PIN_RIGHTMOTOR2, RIGHTCHANNEL2);
+  ledcSetup(LEFTCHANNEL1, 5000, 8);
+  ledcAttachPin(PIN_LEFTMOTOR1, LEFTCHANNEL1);
+  ledcSetup(LEFTCHANNEL2, 5000, 8);
+  ledcAttachPin(PIN_LEFTMOTOR2, LEFTCHANNEL2);
 }
 
 void loop() {

@@ -1,17 +1,22 @@
 #define PIN_RIGHTMOTOR1 13 //RED PIN
 #define PIN_RIGHTMOTOR2 12 //BROWN PIN
-#define PIN_LEFTMOTOR1 14 //YELLOW PIN
-#define PIN_LEFTMOTOR2 27 //ORANGE PIN
+#define PIN_LEFTMOTOR1 25 //YELLOW PIN
+#define PIN_LEFTMOTOR2 26 //ORANGE PIN
 
-#define PIN_RIGHTENCODER1 26 //BROWN PIN
-#define PIN_RIGHTENCODER2 25 //WHITE PIN
+#define PIN_RIGHTENCODER1 35 //BROWN PIN
+#define PIN_RIGHTENCODER2 34 //WHITE PIN
 #define PIN_LEFTENCODER1 33 //BROWN PIN
-#define PIN_LEFTENCODER2 32 //WHITE PIN
+#define PIN_LEFTENCODER2 34 //WHITE PIN
 
-#define PIN_BACKTRIGGER 23 //RED PIN
-#define PIN_BACKECHO 22 //BROWN PIN
-#define PIN_FRONTTRIGGER 18 //YELLOW PIN
-#define PIN_FRONTECHO 19 //ORANGE PIN
+#define PIN_BACKTRIGGER 19 //GREEN PIN
+#define PIN_BACKECHO 18 //YELLOW PIN
+#define PIN_FRONTTRIGGER 23 //GREEN PIN
+#define PIN_FRONTECHO 22 //YELLOW PIN
+
+#define RIGHTCHANNEL1 0
+#define RIGHTCHANNEL2 1
+#define LEFTCHANNEL1 2
+#define LEFTCHANNEL2 3
 
 namespace world {
 
@@ -54,19 +59,26 @@ namespace world {
 
   void moveMotor(){
     if(leftDirection){
-      ledcWrite(ledChannel, dutyCycle);
-      analogWrite(PIN_LEFTMOTOR1, leftSpeed);
-      analogWrite(PIN_LEFTMOTOR2, 0);
+      ledcWrite(LEFTCHANNEL1, leftSpeed);
+      ledcWrite(LEFTCHANNEL1, 0);
+      //analogWrite(PIN_LEFTMOTOR1, leftSpeed);
+      //analogWrite(PIN_LEFTMOTOR2, 0);
     }else{
-      analogWrite(PIN_LEFTMOTOR1, 0);
-      analogWrite(PIN_LEFTMOTOR2, leftSpeed);
+      ledcWrite(LEFTCHANNEL1, 0);
+      ledcWrite(LEFTCHANNEL1, leftSpeed);
+      //analogWrite(PIN_LEFTMOTOR1, 0);
+      //analogWrite(PIN_LEFTMOTOR2, leftSpeed);
     }
     if(rightDirection){
-      analogWrite(PIN_RIGHTMOTOR1, rightSpeed);
-      analogWrite(PIN_RIGHTMOTOR2, 0);
+      ledcWrite(RIGHTCHANNEL1, rightSpeed);
+      ledcWrite(RIGHTCHANNEL1, 0);
+      //analogWrite(PIN_RIGHTMOTOR1, rightSpeed);
+      //analogWrite(PIN_RIGHTMOTOR2, 0);
     }else{
-      analogWrite(PIN_RIGHTMOTOR1, 0);
-      analogWrite(PIN_RIGHTMOTOR2, rightSpeed);
+      ledcWrite(RIGHTCHANNEL1, 0);
+      ledcWrite(RIGHTCHANNEL1, rightSpeed);
+      //analogWrite(PIN_RIGHTMOTOR1, 0);
+      //analogWrite(PIN_RIGHTMOTOR2, rightSpeed);
     }
   }
 
@@ -79,6 +91,8 @@ namespace world {
       if(fabs(leftEncoderPosition - Setpoint) > 6000){
         //rampUp(); FUNÇÃO DE ACELERAÇÃO
         MotorPID.Compute();
+        updateEncoder();
+        moveMotor();
       }
       Output = 0;
       while(fabs(leftEncoderPosition - Setpoint) > 20){
@@ -120,6 +134,7 @@ namespace world {
         rightSpeed = Output;
         leftDirection = direction;
         rightDirection = !direction;
+        moveMotor();
       }
     Output = 0;
     moveMotor();
