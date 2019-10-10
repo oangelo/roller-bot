@@ -89,7 +89,7 @@ void serialReader(){
       break;
 
       case 106:
-      updateDistance();
+      updateDistance(2);
       Serial.print("DISTANCE = ");
       Serial.print(frontDistance);
       Serial.print(", ");
@@ -154,9 +154,15 @@ void serialReader(){
       uint32_t steps = array_to_Int(0, serial[3], serial[4], serial[5]);
       int action = ((serial[2]>>1)&1);
       bool direction = ((serial[2]&1) == 1);
-      if(((serial[2]>>2)&1) == 0) execute(action, steps, direction);
-      else execute(0, 10^12, direction);
+      if(((serial[2]>>2)&1) == 0) Serial.print(execute(action, steps, direction));
+      else Serial.print(execute(0, 10^12, direction));
       Serial.println();
+      Output = 0;
+      leftSpeed = Output;
+      rightSpeed = Output;
+      moveMotor();
+
+      break;
     }
   }
 }

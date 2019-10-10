@@ -1,12 +1,12 @@
-#define PIN_RIGHTMOTOR1 13 //RED PIN
-#define PIN_RIGHTMOTOR2 12 //BROWN PIN
-#define PIN_LEFTMOTOR1 25 //YELLOW PIN
-#define PIN_LEFTMOTOR2 26 //ORANGE PIN
+#define PIN_RIGHTMOTOR1 13 //BROWN PIN
+#define PIN_RIGHTMOTOR2 12 //RED PIN
+#define PIN_LEFTMOTOR1 25 //ORANGE PIN
+#define PIN_LEFTMOTOR2 26 //YELLOW PIN
 
-#define PIN_RIGHTENCODER1 35 //BROWN PIN
-#define PIN_RIGHTENCODER2 34 //WHITE PIN
-#define PIN_LEFTENCODER1 33 //BROWN PIN
-#define PIN_LEFTENCODER2 34 //WHITE PIN
+#define PIN_RIGHTENCODER1 34 //BROWN PIN
+#define PIN_RIGHTENCODER2 35 //WHITE PIN
+#define PIN_LEFTENCODER1 32 //BROWN PIN
+#define PIN_LEFTENCODER2 33 //WHITE PIN
 
 #define PIN_BACKTRIGGER 19 //GREEN PIN
 #define PIN_BACKECHO 18 //YELLOW PIN
@@ -26,7 +26,9 @@ namespace world {
   double rightEncoderPosition, leftEncoderPosition;
   double acceleration;
 
-  byte collision = 0;
+  long now = millis();
+
+  byte collision = 5;
   byte frontDistance, backDistance;
   volatile byte leftSpeed, rightSpeed;
 
@@ -46,83 +48,71 @@ namespace world {
     rightEncoderPosition = rightEncoderMotor.getCount();
   }
 
-  void updateDistance(){
-    backDistance = backSensor.read();
-    frontDistance = frontSensor.read();
+  void updateDistance(int sensor){
+    if(millis()-now>=10){
+    if(sensor==0 || sensor==2) backDistance = backSensor.read();
+    if(sensor==1 || sensor==2) frontDistance = frontSensor.read();
+    now = millis();
+    }
   }
 
   void  zeroEncoder(){
-    leftEncoderMotor.setCount(0);
-    rightEncoderMotor.setCount(0);
+    leftEncoderMotor.clearCount();
+    rightEncoderMotor.clearCount();
     updateEncoder();
   }
 
   void moveMotor(){
-    if(leftDirection){
-      ledcWrite(LEFTCHANNEL1, leftSpeed);
-      ledcWrite(LEFTCHANNEL1, 0);
-      //analogWrite(PIN_LEFTMOTOR1, leftSpeed);
-      //analogWrite(PIN_LEFTMOTOR2, 0);
-    }else{
-      ledcWrite(LEFTCHANNEL1, 0);
-      ledcWrite(LEFTCHANNEL1, leftSpeed);
-      //analogWrite(PIN_LEFTMOTOR1, 0);
-      //analogWrite(PIN_LEFTMOTOR2, leftSpeed);
-    }
-    if(rightDirection){
-      ledcWrite(RIGHTCHANNEL1, rightSpeed);
-      ledcWrite(RIGHTCHANNEL1, 0);
-      //analogWrite(PIN_RIGHTMOTOR1, rightSpeed);
-      //analogWrite(PIN_RIGHTMOTOR2, 0);
-    }else{
-      ledcWrite(RIGHTCHANNEL1, 0);
-      ledcWrite(RIGHTCHANNEL1, rightSpeed);
-      //analogWrite(PIN_RIGHTMOTOR1, 0);
-      //analogWrite(PIN_RIGHTMOTOR2, rightSpeed);
-    }
+      ledcWrite(LEFTCHANNEL1, leftDirection?leftSpeed:0);
+      ledcWrite(LEFTCHANNEL2, leftDirection?0:leftSpeed);
+      ledcWrite(RIGHTCHANNEL1, rightDirection?rightSpeed:0);
+      ledcWrite(RIGHTCHANNEL2, rightDirection?0:rightSpeed);
   }
 
   String execute(int action, uint32_t steps, bool direction){
     zeroEncoder();
+    Serial.printf("Iniciando World.step com %d passos e %s%s\n", steps, action==0?"andando para ":"girando no sentido", action==0?direction?"frente":"tras":direction?"horario":"anti-horario");
     if(action == 0){
       MotorPID.SetTunings(walk_Kp, walk_Ki, walk_Kd);
-      MotorPID.SetOutputLimits(30, 255);
+      MotorPID.SetOutputLimits(40, 255);
       Setpoint = steps;
-      if(fabs(leftEncoderPosition - Setpoint) > 6000){
+      leftDirection = direction;
+      rightDirection = direction;
+      /*if(fabs(leftEncoderPosition - Setpoint) > 6000){
         //rampUp(); FUNÇÃO DE ACELERAÇÃO
-        MotorPID.Compute();
         updateEncoder();
+        MotorPID.Compute();
+        leftSpeed = Output;
+        rightSpeed = Output;
         moveMotor();
-      }
-      Output = 0;
+      }*/
       while(fabs(leftEncoderPosition - Setpoint) > 20){
         updateEncoder();
-        updateDistance();
+        updateDistance(direction?1:0);
         if(Serial.available()>0) if(Serial.peek() == 31){
           Serial.read();
           return "INTERRUPTED";
         }
+        byte left = leftSpeed;
         MotorPID.Compute();
         leftSpeed = Output;
         rightSpeed = Output;
-        leftDirection = direction;
-        rightDirection = direction;
-        if(!direction && frontDistance <= collision){
-          return "COLLISION";
-        }
-        if(direction && backDistance <= collision){
-          return "COLLISION";
-        }
-        moveMotor();
+        if(direction && frontDistance <= collision){Serial.println(frontDistance); return "COLLISION FRENTE";};
+        if(!direction && backDistance <= collision){Serial.println(backDistance); return "COLLISION TRAS";};
+        if(leftSpeed!=left) moveMotor();
+        Serial.print(leftSpeed);
+        Serial.print(',');
+        Serial.println(leftEncoderPosition);
       }
-      Output = 0;
       return "SUCCESS";
-    }
+    } //Fim de Walk
 
     if(action == 1){
       MotorPID.SetTunings(turn_Kp, turn_Ki, turn_Kd);
       MotorPID.SetOutputLimits(40, 255);
       Setpoint = steps;
+      leftDirection = direction;
+      rightDirection = !direction;
       while(fabs(leftEncoderPosition - Setpoint) > 20){
         if(Serial.available()>0) if(Serial.peek() == 31){
           Serial.read();
@@ -132,14 +122,11 @@ namespace world {
         MotorPID.Compute();
         leftSpeed = Output;
         rightSpeed = Output;
-        leftDirection = direction;
-        rightDirection = !direction;
         moveMotor();
       }
-    Output = 0;
-    moveMotor();
-    return "SUCCESS";
-    }
-  }
+      return "SUCCESS";
+  } //Fim de Turn
+
+  } //Fim de Execute
 
 }
